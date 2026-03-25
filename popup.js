@@ -1,11 +1,11 @@
 const recordBtn = document.getElementById('recordBtn');
 const stopBtn = document.getElementById('stopBtn');
 const saveBtn = document.getElementById('saveBtn');
-const timerEl = document.getElementById('timer');
 const statusEl = document.getElementById('status');
 const waveformCanvas = document.getElementById('waveform');
 const idleMessage = document.getElementById('idleMessage');
 const timerDisplay = document.getElementById('timer');
+const headerDot = document.getElementById('headerDot');
 
 const ctx = waveformCanvas.getContext('2d');
 
@@ -22,6 +22,10 @@ let secondsElapsed = 0;
 function setStatus(msg, type = '') {
   statusEl.textContent = msg;
   statusEl.className = 'status' + (type ? ' ' + type : '');
+}
+
+function setDot(state) {
+  headerDot.className = 'header-dot' + (state ? ' ' + state : '');
 }
 
 function formatTime(secs) {
@@ -65,13 +69,12 @@ function startWaveform(stream) {
     const w = waveformCanvas.width;
     const h = waveformCanvas.height;
 
-    ctx.fillStyle = '#1a1a24';
-    ctx.fillRect(0, 0, w, h);
+    ctx.clearRect(0, 0, w, h);
 
-    ctx.lineWidth = 2;
-    ctx.strokeStyle = '#6C63FF';
-    ctx.shadowBlur = 6;
-    ctx.shadowColor = '#6C63FF';
+    ctx.lineWidth = 2.5;
+    ctx.strokeStyle = '#7C6FFF';
+    ctx.shadowBlur = 10;
+    ctx.shadowColor = 'rgba(124, 111, 255, 0.6)';
     ctx.beginPath();
 
     const sliceWidth = w / bufferLength;
@@ -102,10 +105,9 @@ function stopWaveform() {
     audioContext.close();
     audioContext = null;
   }
-  ctx.fillStyle = '#1a1a24';
-  ctx.fillRect(0, 0, waveformCanvas.width, waveformCanvas.height);
+  ctx.clearRect(0, 0, waveformCanvas.width, waveformCanvas.height);
   waveformCanvas.style.display = 'none';
-  idleMessage.style.display = 'block';
+  idleMessage.style.display = 'flex';
 }
 
 recordBtn.addEventListener('click', async () => {
@@ -118,6 +120,7 @@ recordBtn.addEventListener('click', async () => {
     }
     if (response.error) {
       setStatus('Error: ' + response.error, 'error');
+      setDot('');
       return;
     }
 
@@ -153,10 +156,12 @@ recordBtn.addEventListener('click', async () => {
         convertToWav(blob).then((wavBlob) => {
           recordedBlob = wavBlob;
           saveBtn.disabled = false;
+          setDot('ready');
           setStatus(`Recorded ${formatTime(secondsElapsed)} — ready to save`, 'success');
         }).catch(() => {
           recordedBlob = blob;
           saveBtn.disabled = false;
+          setDot('ready');
           setStatus(`Recorded ${formatTime(secondsElapsed)} — ready to save`, 'success');
         });
       };
@@ -164,6 +169,7 @@ recordBtn.addEventListener('click', async () => {
       mediaRecorder.start(100);
       startWaveform(stream);
       startTimer();
+      setDot('active');
 
       recordBtn.disabled = true;
       recordBtn.classList.add('recording');
@@ -173,6 +179,7 @@ recordBtn.addEventListener('click', async () => {
 
     } catch (err) {
       setStatus('Failed to start recording: ' + err.message, 'error');
+      setDot('');
     }
   });
 });
@@ -187,6 +194,7 @@ stopBtn.addEventListener('click', () => {
   }
   stopWaveform();
   stopTimer();
+  setDot('');
 
   recordBtn.disabled = false;
   recordBtn.classList.remove('recording');
@@ -203,7 +211,7 @@ saveBtn.addEventListener('click', () => {
   a.download = `recording-${ts}.wav`;
   a.click();
   URL.revokeObjectURL(url);
-  setStatus('File saved!', 'success');
+  setStatus('Saved!', 'success');
 });
 
 async function convertToWav(blob) {

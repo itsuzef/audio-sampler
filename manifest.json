@@ -1,8 +1,11 @@
 {
   "manifest_version": 3,
   "name": "Audio Sampler",
+  "short_name": "Audio Sampler",
   "version": "1.0.0",
-  "description": "Record and save audio from any website as a WAV file.",
+  "description": "Instantly record audio from any browser tab and export it as a high-quality WAV file — no setup required.",
+  "author": "Audio Sampler",
+  "homepage_url": "https://github.com/youssefhemimy/audio-sampler",
   "permissions": [
     "tabCapture",
     "activeTab",
@@ -10,6 +13,7 @@
   ],
   "action": {
     "default_popup": "popup.html",
+    "default_title": "Audio Sampler — Record tab audio",
     "default_icon": {
       "16": "icons/icon16.png",
       "48": "icons/icon48.png",
