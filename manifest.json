@@ -5,7 +5,7 @@
   "version": "1.0.0",
   "description": "Instantly record audio from any browser tab and export it as a high-quality WAV file — no setup required.",
   "author": "Audio Sampler",
-  "homepage_url": "https://github.com/youssefhemimy/audio-sampler",
+  "homepage_url": "https://github.com/itsuzef/audio-sampler",
   "permissions": [
     "tabCapture",
     "activeTab",
