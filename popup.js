@@ -18,6 +18,7 @@ let analyser = null;
 let animationId = null;
 let timerInterval = null;
 let secondsElapsed = 0;
+let tabTitle = '';
 
 function setStatus(msg, type = '') {
   statusEl.textContent = msg;
@@ -125,6 +126,7 @@ recordBtn.addEventListener('click', async () => {
       return;
     }
 
+    tabTitle = response.tabTitle || '';
     const streamId = response.streamId;
 
     try {
@@ -208,8 +210,11 @@ saveBtn.addEventListener('click', () => {
   const url = URL.createObjectURL(recordedBlob);
   const a = document.createElement('a');
   const ts = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
+  const safeName = tabTitle
+    ? tabTitle.replace(/[\\/:*?"<>|]/g, '').trim().slice(0, 80)
+    : '';
   a.href = url;
-  a.download = `recording-${ts}.wav`;
+  a.download = `${safeName || 'recording'}-${ts}.wav`;
   a.click();
   URL.revokeObjectURL(url);
   setStatus('Saved!', 'success');

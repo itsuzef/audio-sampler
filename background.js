@@ -11,7 +11,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
           sendResponse({ error: chrome.runtime.lastError.message });
           return;
         }
-        sendResponse({ streamId });
+        sendResponse({ streamId, tabTitle: tabs[0].title || '' });
       });
     });
     return true;
