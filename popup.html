@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Audio Sampler</title>
+  <link rel="stylesheet" href="popup.css" />
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <div class="logo">
+        <svg width="28" height="28" viewBox="0 0 28 28" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <circle cx="14" cy="14" r="14" fill="#6C63FF"/>
+          <rect x="12" y="7" width="4" height="10" rx="2" fill="white"/>
+          <path d="M8 13.5C8 16.538 10.686 19 14 19C17.314 19 20 16.538 20 13.5" stroke="white" stroke-width="1.8" stroke-linecap="round"/>
+          <line x1="14" y1="19" x2="14" y2="22" stroke="white" stroke-width="1.8" stroke-linecap="round"/>
+          <line x1="11" y1="22" x2="17" y2="22" stroke="white" stroke-width="1.8" stroke-linecap="round"/>
+        </svg>
+        <span class="logo-text">Audio Sampler</span>
+      </div>
+    </div>
+
+    <div class="waveform-container" id="waveformContainer">
+      <canvas id="waveform" width="280" height="80"></canvas>
+      <div class="idle-message" id="idleMessage">Ready to record</div>
+    </div>
+
+    <div class="timer" id="timer">00:00</div>
+
+    <div class="status" id="status">Press record to start capturing tab audio</div>
+
+    <div class="controls">
+      <button class="btn btn-record" id="recordBtn">
+        <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+          <circle cx="9" cy="9" r="7" fill="currentColor"/>
+        </svg>
+        Record
+      </button>
+      <button class="btn btn-stop" id="stopBtn" disabled>
+        <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+          <rect x="3" y="3" width="12" height="12" rx="2" fill="currentColor"/>
+        </svg>
+        Stop
+      </button>
+      <button class="btn btn-save" id="saveBtn" disabled>
+        <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+          <path d="M9 3v9M5 9l4 4 4-4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+          <path d="M3 14h12" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+        </svg>
+        Save WAV
+      </button>
+    </div>
+  </div>
+  <script src="popup.js"></script>
+</body>
+</html>

@@ -1,0 +1,166 @@
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  background: #0f0f13;
+  color: #e8e8f0;
+  width: 320px;
+  min-height: 280px;
+  overflow: hidden;
+}
+
+.container {
+  padding: 18px 20px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.logo {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.logo-text {
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: 0.3px;
+  color: #e8e8f0;
+}
+
+.waveform-container {
+  background: #1a1a24;
+  border-radius: 10px;
+  border: 1px solid #2a2a38;
+  height: 90px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  overflow: hidden;
+}
+
+#waveform {
+  display: none;
+  width: 100%;
+  height: 100%;
+}
+
+.idle-message {
+  color: #4a4a62;
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.timer {
+  font-size: 28px;
+  font-weight: 300;
+  letter-spacing: 3px;
+  color: #9d9db8;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+
+.timer.recording {
+  color: #ff4d6d;
+}
+
+.status {
+  font-size: 12px;
+  color: #5a5a7a;
+  text-align: center;
+  min-height: 16px;
+}
+
+.status.error {
+  color: #ff6b6b;
+}
+
+.status.success {
+  color: #6bffd8;
+}
+
+.controls {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  border: none;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  padding: 9px 14px;
+  flex: 1;
+}
+
+.btn:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+.btn-record {
+  background: #6C63FF;
+  color: white;
+}
+
+.btn-record:hover:not(:disabled) {
+  background: #7d75ff;
+  transform: translateY(-1px);
+}
+
+.btn-record:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+.btn-record.recording {
+  background: #ff4d6d;
+  animation: pulse 1.4s ease infinite;
+}
+
+.btn-record.recording:hover:not(:disabled) {
+  background: #ff6080;
+}
+
+@keyframes pulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(255, 77, 109, 0.4); }
+  50% { box-shadow: 0 0 0 6px rgba(255, 77, 109, 0); }
+}
+
+.btn-stop {
+  background: #2a2a38;
+  color: #c0c0d8;
+}
+
+.btn-stop:hover:not(:disabled) {
+  background: #333344;
+  transform: translateY(-1px);
+}
+
+.btn-save {
+  background: #1e3a2f;
+  color: #6bffd8;
+}
+
+.btn-save:hover:not(:disabled) {
+  background: #254838;
+  transform: translateY(-1px);
+}

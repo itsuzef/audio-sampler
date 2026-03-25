@@ -1,0 +1,37 @@
+<svg width="128" height="128" viewBox="0 0 128 128" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background -->
+  <rect width="128" height="128" rx="28" fill="url(#bg)"/>
+  
+  <!-- Subtle inner glow ring -->
+  <rect width="128" height="128" rx="28" fill="url(#glow)" opacity="0.5"/>
+
+  <!-- Waveform bars (audio spectrum look) -->
+  <rect x="18" y="54" width="7" height="20" rx="3.5" fill="white" opacity="0.35"/>
+  <rect x="29" y="44" width="7" height="40" rx="3.5" fill="white" opacity="0.55"/>
+  <rect x="40" y="34" width="7" height="60" rx="3.5" fill="white" opacity="0.75"/>
+  <rect x="51" y="24" width="7" height="80" rx="3.5" fill="white"/>
+  <rect x="62" y="18" width="7" height="92" rx="3.5" fill="white"/>
+  <rect x="73" y="24" width="7" height="80" rx="3.5" fill="white"/>
+  <rect x="84" y="34" width="7" height="60" rx="3.5" fill="white" opacity="0.75"/>
+  <rect x="95" y="44" width="7" height="40" rx="3.5" fill="white" opacity="0.55"/>
+  <rect x="106" y="54" width="7" height="20" rx="3.5" fill="white" opacity="0.35"/>
+
+  <!-- Record dot overlay (bottom right) -->
+  <circle cx="98" cy="98" r="18" fill="url(#reddot)"/>
+  <circle cx="98" cy="98" r="8" fill="white"/>
+
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="128" y2="128" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#7C6FFF"/>
+      <stop offset="100%" stop-color="#4F46E5"/>
+    </linearGradient>
+    <radialGradient id="glow" cx="30%" cy="20%" r="70%">
+      <stop offset="0%" stop-color="white" stop-opacity="0.18"/>
+      <stop offset="100%" stop-color="white" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="reddot" cx="40%" cy="35%" r="65%">
+      <stop offset="0%" stop-color="#FF6B8A"/>
+      <stop offset="100%" stop-color="#E8294C"/>
+    </radialGradient>
+  </defs>
+</svg>
