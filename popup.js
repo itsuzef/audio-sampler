@@ -55,6 +55,7 @@ function startWaveform(stream) {
   analyser.fftSize = 256;
   const source = audioContext.createMediaStreamSource(stream);
   source.connect(analyser);
+  source.connect(audioContext.destination);
 
   waveformCanvas.style.display = 'block';
   idleMessage.style.display = 'none';
