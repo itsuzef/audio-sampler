@@ -2,14 +2,16 @@
   "manifest_version": 3,
   "name": "Audio Sampler",
   "short_name": "Audio Sampler",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Instantly record audio from any browser tab and export it as a high-quality WAV file — no setup required.",
   "author": "Audio Sampler",
   "homepage_url": "https://github.com/itsuzef/audio-sampler",
   "permissions": [
     "tabCapture",
     "activeTab",
-    "scripting"
+    "scripting",
+    "offscreen",
+    "downloads"
   ],
   "action": {
     "default_popup": "popup.html",

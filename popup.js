@@ -9,277 +9,217 @@ const headerDot = document.getElementById('headerDot');
 
 const ctx = waveformCanvas.getContext('2d');
 
-let mediaRecorder = null;
-let audioChunks = [];
-let recordedBlob = null;
-let audioStream = null;
-let audioContext = null;
-let analyser = null;
-let animationId = null;
+let port = null;
 let timerInterval = null;
-let secondsElapsed = 0;
-let tabTitle = '';
+let streamStartedAt = null;
+let lastDurationMs = 0;
+let currentStatus = 'idle';
+let waveformBuffer = null;
+let waveformDirty = false;
+let rafId = null;
 
 function setStatus(msg, type = '') {
   statusEl.textContent = msg;
   statusEl.className = 'status' + (type ? ' ' + type : '');
 }
 
-function setDot(state) {
-  headerDot.className = 'header-dot' + (state ? ' ' + state : '');
+function setDot(s) {
+  headerDot.className = 'header-dot' + (s ? ' ' + s : '');
 }
 
-function formatTime(secs) {
-  const m = String(Math.floor(secs / 60)).padStart(2, '0');
-  const s = String(secs % 60).padStart(2, '0');
+function formatTime(ms) {
+  const total = Math.max(0, Math.floor(ms / 1000));
+  const m = String(Math.floor(total / 60)).padStart(2, '0');
+  const s = String(total % 60).padStart(2, '0');
   return `${m}:${s}`;
 }
 
 function startTimer() {
-  secondsElapsed = 0;
-  timerDisplay.textContent = '00:00';
+  stopTimer();
+  const tick = () => {
+    const elapsed = streamStartedAt ? Date.now() - streamStartedAt : lastDurationMs;
+    timerDisplay.textContent = formatTime(elapsed);
+  };
+  tick();
+  timerInterval = setInterval(tick, 250);
   timerDisplay.classList.add('recording');
-  timerInterval = setInterval(() => {
-    secondsElapsed++;
-    timerDisplay.textContent = formatTime(secondsElapsed);
-  }, 1000);
 }
 
 function stopTimer() {
-  clearInterval(timerInterval);
+  if (timerInterval) {
+    clearInterval(timerInterval);
+    timerInterval = null;
+  }
   timerDisplay.classList.remove('recording');
 }
 
-function startWaveform(stream) {
-  audioContext = new AudioContext();
-  analyser = audioContext.createAnalyser();
-  analyser.fftSize = 256;
-  const source = audioContext.createMediaStreamSource(stream);
-  source.connect(analyser);
-  source.connect(audioContext.destination);
-
+function showWaveform() {
   waveformCanvas.style.display = 'block';
   idleMessage.style.display = 'none';
-
-  const bufferLength = analyser.frequencyBinCount;
-  const dataArray = new Uint8Array(bufferLength);
-
-  function draw() {
-    animationId = requestAnimationFrame(draw);
-    analyser.getByteTimeDomainData(dataArray);
-
-    const w = waveformCanvas.width;
-    const h = waveformCanvas.height;
-
-    ctx.clearRect(0, 0, w, h);
-
-    ctx.lineWidth = 2.5;
-    ctx.strokeStyle = '#7C6FFF';
-    ctx.shadowBlur = 10;
-    ctx.shadowColor = 'rgba(124, 111, 255, 0.6)';
-    ctx.beginPath();
-
-    const sliceWidth = w / bufferLength;
-    let x = 0;
-
-    for (let i = 0; i < bufferLength; i++) {
-      const v = dataArray[i] / 128.0;
-      const y = (v * h) / 2;
-      if (i === 0) ctx.moveTo(x, y);
-      else ctx.lineTo(x, y);
-      x += sliceWidth;
-    }
-
-    ctx.lineTo(w, h / 2);
-    ctx.stroke();
-    ctx.shadowBlur = 0;
-  }
-
-  draw();
+  if (!rafId) loopDrawWaveform();
 }
 
-function stopWaveform() {
-  if (animationId) {
-    cancelAnimationFrame(animationId);
-    animationId = null;
-  }
-  if (audioContext) {
-    audioContext.close();
-    audioContext = null;
-  }
-  ctx.clearRect(0, 0, waveformCanvas.width, waveformCanvas.height);
+function hideWaveform() {
   waveformCanvas.style.display = 'none';
   idleMessage.style.display = 'flex';
+  if (rafId) {
+    cancelAnimationFrame(rafId);
+    rafId = null;
+  }
+  waveformBuffer = null;
+  ctx.clearRect(0, 0, waveformCanvas.width, waveformCanvas.height);
 }
 
-recordBtn.addEventListener('click', async () => {
-  setStatus('Requesting tab audio capture...');
+function loopDrawWaveform() {
+  rafId = requestAnimationFrame(loopDrawWaveform);
+  if (!waveformDirty || !waveformBuffer) return;
+  waveformDirty = false;
 
-  chrome.runtime.sendMessage({ action: 'getStreamId' }, async (response) => {
-    if (chrome.runtime.lastError) {
-      setStatus('Error: ' + chrome.runtime.lastError.message, 'error');
-      return;
-    }
-    if (response.error) {
-      setStatus('Error: ' + response.error, 'error');
-      setDot('');
-      return;
-    }
+  const w = waveformCanvas.width;
+  const h = waveformCanvas.height;
+  ctx.clearRect(0, 0, w, h);
+  ctx.lineWidth = 2.5;
+  ctx.strokeStyle = '#7C6FFF';
+  ctx.shadowBlur = 10;
+  ctx.shadowColor = 'rgba(124, 111, 255, 0.6)';
+  ctx.beginPath();
 
-    tabTitle = response.tabTitle || '';
-    const streamId = response.streamId;
-
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({
-        audio: {
-          mandatory: {
-            chromeMediaSource: 'tab',
-            chromeMediaSourceId: streamId,
-          },
-        },
-        video: false,
-      });
-
-      audioStream = stream;
-      audioChunks = [];
-      recordedBlob = null;
-
-      const mimeType = MediaRecorder.isTypeSupported('audio/webm;codecs=opus')
-        ? 'audio/webm;codecs=opus'
-        : 'audio/webm';
-
-      mediaRecorder = new MediaRecorder(stream, { mimeType });
-
-      mediaRecorder.ondataavailable = (e) => {
-        if (e.data && e.data.size > 0) audioChunks.push(e.data);
-      };
-
-      mediaRecorder.onstop = () => {
-        const blob = new Blob(audioChunks, { type: mimeType });
-        convertToWav(blob).then((wavBlob) => {
-          recordedBlob = wavBlob;
-          saveBtn.disabled = false;
-          setDot('ready');
-          setStatus(`Recorded ${formatTime(secondsElapsed)} — ready to save`, 'success');
-        }).catch(() => {
-          recordedBlob = blob;
-          saveBtn.disabled = false;
-          setDot('ready');
-          setStatus(`Recorded ${formatTime(secondsElapsed)} — ready to save`, 'success');
-        });
-      };
-
-      mediaRecorder.start(100);
-      startWaveform(stream);
-      startTimer();
-      setDot('active');
-
-      recordBtn.disabled = true;
-      recordBtn.classList.add('recording');
-      stopBtn.disabled = false;
-      saveBtn.disabled = true;
-      setStatus('Recording tab audio...');
-
-    } catch (err) {
-      setStatus('Failed to start recording: ' + err.message, 'error');
-      setDot('');
-    }
-  });
-});
-
-stopBtn.addEventListener('click', () => {
-  if (mediaRecorder && mediaRecorder.state !== 'inactive') {
-    mediaRecorder.stop();
+  const len = waveformBuffer.length;
+  const slice = w / len;
+  let x = 0;
+  for (let i = 0; i < len; i++) {
+    const v = waveformBuffer[i] / 128.0;
+    const y = (v * h) / 2;
+    if (i === 0) ctx.moveTo(x, y);
+    else ctx.lineTo(x, y);
+    x += slice;
   }
-  if (audioStream) {
-    audioStream.getTracks().forEach((t) => t.stop());
-    audioStream = null;
+  ctx.lineTo(w, h / 2);
+  ctx.stroke();
+  ctx.shadowBlur = 0;
+}
+
+function applyState(s) {
+  currentStatus = s.status;
+
+  if (s.status === 'recording') {
+    streamStartedAt = Date.now() - (s.durationMs || 0);
+    lastDurationMs = s.durationMs || 0;
+    setDot('active');
+    showWaveform();
+    startTimer();
+    recordBtn.disabled = true;
+    recordBtn.classList.add('recording');
+    stopBtn.disabled = false;
+    saveBtn.disabled = true;
+    setStatus('Recording tab audio...');
+    return;
   }
-  stopWaveform();
+
+  if (s.status === 'requesting') {
+    streamStartedAt = null;
+    setDot('');
+    recordBtn.disabled = true;
+    recordBtn.classList.remove('recording');
+    stopBtn.disabled = true;
+    saveBtn.disabled = true;
+    setStatus('Requesting tab audio capture...');
+    return;
+  }
+
+  if (s.status === 'processing') {
+    streamStartedAt = null;
+    lastDurationMs = s.durationMs || lastDurationMs;
+    stopTimer();
+    timerDisplay.textContent = formatTime(lastDurationMs);
+    setDot('');
+    recordBtn.disabled = true;
+    recordBtn.classList.remove('recording');
+    stopBtn.disabled = true;
+    saveBtn.disabled = true;
+    setStatus('Processing...');
+    return;
+  }
+
+  if (s.status === 'ready') {
+    streamStartedAt = null;
+    lastDurationMs = s.durationMs || lastDurationMs;
+    stopTimer();
+    hideWaveform();
+    timerDisplay.textContent = formatTime(lastDurationMs);
+    setDot('ready');
+    recordBtn.disabled = false;
+    recordBtn.classList.remove('recording');
+    stopBtn.disabled = true;
+    saveBtn.disabled = false;
+    if (s.errorMsg) setStatus(s.errorMsg, 'error');
+    else setStatus(`Recorded ${formatTime(lastDurationMs)} — ready to save`, 'success');
+    return;
+  }
+
+  if (s.status === 'saving') {
+    setStatus('Saving...');
+    saveBtn.disabled = true;
+    return;
+  }
+
+  if (s.status === 'error') {
+    streamStartedAt = null;
+    stopTimer();
+    hideWaveform();
+    setDot('');
+    recordBtn.disabled = false;
+    recordBtn.classList.remove('recording');
+    stopBtn.disabled = true;
+    saveBtn.disabled = true;
+    timerDisplay.textContent = '00:00';
+    setStatus('Error: ' + (s.errorMsg || 'unknown'), 'error');
+    return;
+  }
+
+  // idle
+  streamStartedAt = null;
+  lastDurationMs = 0;
   stopTimer();
+  hideWaveform();
+  timerDisplay.textContent = '00:00';
   setDot('');
-
   recordBtn.disabled = false;
   recordBtn.classList.remove('recording');
   stopBtn.disabled = true;
-  setStatus('Processing...');
+  saveBtn.disabled = true;
+  setStatus('Press record to begin');
+}
+
+function connect() {
+  port = chrome.runtime.connect({ name: 'popup' });
+  port.onMessage.addListener((msg) => {
+    if (msg && msg.type === 'state') applyState(msg.state);
+  });
+  port.onDisconnect.addListener(() => {
+    port = null;
+  });
+}
+
+chrome.runtime.onMessage.addListener((msg) => {
+  if (!msg || msg.target !== 'popup') return;
+  if (msg.type === 'waveform' && Array.isArray(msg.data)) {
+    waveformBuffer = msg.data;
+    waveformDirty = true;
+  }
+});
+
+recordBtn.addEventListener('click', () => {
+  if (!port) connect();
+  port.postMessage({ action: 'start' });
+});
+
+stopBtn.addEventListener('click', () => {
+  port && port.postMessage({ action: 'stop' });
 });
 
 saveBtn.addEventListener('click', () => {
-  if (!recordedBlob) return;
-  const url = URL.createObjectURL(recordedBlob);
-  const a = document.createElement('a');
-  const ts = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
-  const safeName = tabTitle
-    ? tabTitle.replace(/[\\/:*?"<>|]/g, '').trim().slice(0, 80)
-    : '';
-  a.href = url;
-  a.download = `${safeName || 'recording'}-${ts}.wav`;
-  a.click();
-  URL.revokeObjectURL(url);
-  setStatus('Saved!', 'success');
+  port && port.postMessage({ action: 'save' });
 });
 
-async function convertToWav(blob) {
-  const arrayBuffer = await blob.arrayBuffer();
-  const offlineCtx = new OfflineAudioContext(2, 1, 44100);
-  const decoded = await new Promise((resolve, reject) => {
-    const ctx2 = new AudioContext();
-    ctx2.decodeAudioData(arrayBuffer, resolve, reject);
-  });
-
-  const sampleRate = decoded.sampleRate;
-  const numberOfChannels = decoded.numberOfChannels;
-  const length = decoded.length;
-
-  const offlineContext = new OfflineAudioContext(numberOfChannels, length, sampleRate);
-  const source = offlineContext.createBufferSource();
-  source.buffer = decoded;
-  source.connect(offlineContext.destination);
-  source.start(0);
-
-  const renderedBuffer = await offlineContext.startRendering();
-  return audioBufferToWav(renderedBuffer);
-}
-
-function audioBufferToWav(buffer) {
-  const numChannels = buffer.numberOfChannels;
-  const sampleRate = buffer.sampleRate;
-  const format = 1;
-  const bitDepth = 16;
-
-  const dataLength = buffer.length * numChannels * (bitDepth / 8);
-  const wavBuffer = new ArrayBuffer(44 + dataLength);
-  const view = new DataView(wavBuffer);
-
-  function writeString(offset, str) {
-    for (let i = 0; i < str.length; i++) {
-      view.setUint8(offset + i, str.charCodeAt(i));
-    }
-  }
-
-  writeString(0, 'RIFF');
-  view.setUint32(4, 36 + dataLength, true);
-  writeString(8, 'WAVE');
-  writeString(12, 'fmt ');
-  view.setUint32(16, 16, true);
-  view.setUint16(20, format, true);
-  view.setUint16(22, numChannels, true);
-  view.setUint32(24, sampleRate, true);
-  view.setUint32(28, sampleRate * numChannels * (bitDepth / 8), true);
-  view.setUint16(32, numChannels * (bitDepth / 8), true);
-  view.setUint16(34, bitDepth, true);
-  writeString(36, 'data');
-  view.setUint32(40, dataLength, true);
-
-  let offset = 44;
-  for (let i = 0; i < buffer.length; i++) {
-    for (let ch = 0; ch < numChannels; ch++) {
-      const sample = Math.max(-1, Math.min(1, buffer.getChannelData(ch)[i]));
-      view.setInt16(offset, sample < 0 ? sample * 0x8000 : sample * 0x7fff, true);
-      offset += 2;
-    }
-  }
-
-  return new Blob([wavBuffer], { type: 'audio/wav' });
-}
+connect();
